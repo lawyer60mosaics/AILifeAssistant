@@ -7,9 +7,18 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from app.core.config import settings
-from app.models.events import ClientHello, ErrorEvent, SessionState, TranscriptDelta
+from app.models.events import (
+    ClientHello,
+    ErrorEvent,
+    QaRequest,
+    SessionState,
+    TranscriptDelta,
+    TranscriptEdit,
+    TranscriptEdited,
+)
 from app.services.llm_gateway import LlmGateway
 from app.services.redaction import Redactor
+from app.services.store import SessionStore
 from app.services.transcriber import MockTranscriber
 
 
@@ -19,10 +28,14 @@ class HubSession:
     clients: set[WebSocket] = field(default_factory=set)
     transcript_segments: list[str] = field(default_factory=list)
     transcriber: MockTranscriber = field(default_factory=MockTranscriber)
+    store: SessionStore = field(init=False)
     redactor: Redactor = field(
         default_factory=lambda: Redactor(settings.redact_custom_terms.split(","))
     )
     llm_gateway: LlmGateway = field(default_factory=lambda: LlmGateway(settings.local_only))
+
+    def __post_init__(self) -> None:
+        self.store = SessionStore(self.session_id)
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -76,6 +89,33 @@ class HubSession:
             )
             return
 
+        if payload.get("type") == "transcript_edit":
+            try:
+                event = TranscriptEdit.model_validate(payload)
+            except ValidationError as exc:
+                await self.send_error(websocket, "INVALID_EDIT", exc.errors()[0]["msg"])
+                return
+            if not self.store.edit_segment(event.segment_id, self.redactor.clean(event.text)):
+                await self.send_error(websocket, "SEGMENT_NOT_FOUND", "没有找到要编辑的转录片段。")
+                return
+            edited = TranscriptEdited(segmentId=event.segment_id, text=event.text)
+            await self.broadcast(edited.model_dump(by_alias=True))
+            return
+
+        if payload.get("type") == "qa_request":
+            try:
+                event = QaRequest.model_validate(payload)
+            except ValidationError as exc:
+                await self.send_error(websocket, "INVALID_QA", exc.errors()[0]["msg"])
+                return
+            response = await self.llm_gateway.answer_question(
+                self.redactor.clean(event.question),
+                self.store.full_text(),
+            )
+            self.store.append_qa(response)
+            await self.broadcast(response.model_dump())
+            return
+
         await self.send_error(websocket, "UNSUPPORTED_EVENT", "暂不支持该消息类型。")
 
     async def handle_audio(self, frame: bytes) -> None:
@@ -92,12 +132,20 @@ class HubSession:
             isFinal=segment.is_final,
         )
         self.transcript_segments.append(cleaned_segment.text)
+        self.store.append_segment(cleaned_segment)
         await self.broadcast(cleaned_segment.model_dump(by_alias=True))
 
         if len(self.transcript_segments) > 0 and len(self.transcript_segments) % 4 == 0:
             transcript = "\n".join(self.transcript_segments[-4:])
             analysis = await self.llm_gateway.summarize_window(transcript)
+            self.store.append_analysis(analysis)
             await self.broadcast(analysis.model_dump(by_alias=True))
+
+    async def analyze_now(self) -> dict:
+        analysis = await self.llm_gateway.final_report(self.store.full_text())
+        self.store.append_analysis(analysis)
+        await self.broadcast(analysis.model_dump(by_alias=True))
+        return analysis.model_dump(by_alias=True)
 
     async def send_error(self, websocket: WebSocket, code: str, message: str) -> None:
         event = ErrorEvent(code=code, message=message)
@@ -121,4 +169,3 @@ class HubSession:
                     "connectedClients": len(self.clients),
                 }
             )
-

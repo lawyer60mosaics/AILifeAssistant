@@ -33,6 +33,18 @@ class TranscriptDelta(BaseModel):
     is_final: bool = Field(alias="isFinal")
 
 
+class TranscriptEdit(BaseModel):
+    type: Literal["transcript_edit"]
+    segment_id: str = Field(alias="segmentId")
+    text: str
+
+
+class TranscriptEdited(BaseModel):
+    type: Literal["transcript_edited"] = "transcript_edited"
+    segment_id: str = Field(alias="segmentId")
+    text: str
+
+
 class AnalysisUpdate(BaseModel):
     type: Literal["analysis_update"] = "analysis_update"
     summary: str
@@ -40,8 +52,18 @@ class AnalysisUpdate(BaseModel):
     decisions: list[str] = Field(default_factory=list)
 
 
+class QaRequest(BaseModel):
+    type: Literal["qa_request"]
+    question: str
+
+
+class QaResponse(BaseModel):
+    type: Literal["qa_response"] = "qa_response"
+    question: str
+    answer: str
+
+
 class ErrorEvent(BaseModel):
     type: Literal["error"] = "error"
     code: str
     message: str
-

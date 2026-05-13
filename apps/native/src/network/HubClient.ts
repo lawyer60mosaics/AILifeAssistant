@@ -15,10 +15,20 @@ export type HubEvent =
       isFinal: boolean;
     }
   | {
+      type: "transcript_edited";
+      segmentId: string;
+      text: string;
+    }
+  | {
       type: "analysis_update";
       summary: string;
       actionItems: Array<{ task: string; owner: string | null; due: string | null }>;
       decisions: string[];
+    }
+  | {
+      type: "qa_response";
+      question: string;
+      answer: string;
     }
   | {
       type: "hub_status";
@@ -90,10 +100,17 @@ export class HubClient {
     }
   }
 
+  sendTranscriptEdit(segmentId: string, text: string) {
+    this.sendJson({ type: "transcript_edit", segmentId, text });
+  }
+
+  askQuestion(question: string) {
+    this.sendJson({ type: "qa_request", question });
+  }
+
   private sendJson(payload: unknown) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(payload));
     }
   }
 }
-

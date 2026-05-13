@@ -7,3 +7,4 @@ dist/
 .vite/
 *.log
 *.tsbuildinfo
+apps/hub/data/
