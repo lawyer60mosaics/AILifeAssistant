@@ -12,15 +12,30 @@
 - pull request 到 `main`、`master`
 - 手动 `workflow_dispatch`
 
-产物：
+默认 push 产物：
 
 - Android debug APK: `ai-minutes-android-debug-apk`
-- iOS simulator app: `ai-minutes-ios-simulator-app`
 
 说明：
 
 - Android APK 可以直接安装到 Android 测试机。
-- iOS simulator app 只能用于模拟器，不能安装到 iPhone 真机。
+- iOS 相关构建暂时改为手动触发，等 Android 跑通后再处理。
+
+### Native iOS Simulator Build
+
+文件：`.github/workflows/native-ios-simulator.yml`
+
+触发方式：
+
+- 手动 `workflow_dispatch`
+
+产物：
+
+- iOS simulator app: `ai-minutes-ios-simulator-app`
+
+说明：
+
+- 该产物只能用于模拟器，不能安装到 iPhone 真机。
 
 ### Native iOS Unsigned Device Build
 
