@@ -14,11 +14,12 @@
 - 阶段性分析事件与手动最终分析 API。
 - 问答请求/响应事件骨架。
 - Markdown/JSON 导出 API。
+- Web 与 Native 端编辑、问答、手动分析、导出入口。
 
 ## 部分完成
 
 - 移动端录音：当前会申请麦克风权限并启动录音会话，但实时推给 Hub 的仍是 mock frame。
-- 云端 LLM：已预留 gateway，当前没有接真实供应商。
+- 云端 LLM：已接 OpenAI-compatible Chat Completions 网关，可通过环境变量配置；默认本地模式不开启云端请求。
 - RAG：已预留问答事件与上下文入口，尚未接 embedding/vector store。
 
 ## 未完成

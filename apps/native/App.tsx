@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -27,6 +28,8 @@ export default function App() {
   const [status, setStatus] = useState("配置 PC Hub 地址后连接");
   const [segments, setSegments] = useState<Segment[]>([]);
   const [summary, setSummary] = useState("暂无阶段性摘要");
+  const [question, setQuestion] = useState("");
+  const [qaItems, setQaItems] = useState<Array<{ question: string; answer: string }>>([]);
 
   const clientRef = useRef<HubClient | null>(null);
   const streamer = useMemo(
@@ -58,8 +61,22 @@ export default function App() {
       return;
     }
 
+    if (event.type === "transcript_edited") {
+      setSegments((current) =>
+        current.map((segment) =>
+          segment.id === event.segmentId ? { ...segment, text: event.text } : segment,
+        ),
+      );
+      return;
+    }
+
     if (event.type === "analysis_update") {
       setSummary(event.summary);
+      return;
+    }
+
+    if (event.type === "qa_response") {
+      setQaItems((current) => [...current, { question: event.question, answer: event.answer }]);
       return;
     }
 
@@ -90,6 +107,45 @@ export default function App() {
 
     await streamer.start();
     setStatus("正在采集音频并推送至 Hub");
+  }
+
+  function updateLocalSegment(segmentId: string, text: string) {
+    setSegments((current) =>
+      current.map((segment) => (segment.id === segmentId ? { ...segment, text } : segment)),
+    );
+  }
+
+  function commitSegment(segment: Segment) {
+    clientRef.current?.sendTranscriptEdit(segment.id, segment.text);
+  }
+
+  function submitQuestion() {
+    const value = question.trim();
+    if (!value) {
+      return;
+    }
+    clientRef.current?.askQuestion(value);
+    setQuestion("");
+  }
+
+  async function analyzeNow() {
+    try {
+      const apiUrl = hubUrl.replace(/^ws/, "http").replace("/ws/client", "/sessions/current/analyze");
+      const response = await fetch(apiUrl, { method: "POST" });
+      if (!response.ok) {
+        throw new Error("分析请求失败");
+      }
+      handleHubEvent((await response.json()) as HubEvent);
+    } catch {
+      Alert.alert("分析失败", "请确认 Hub 正在运行。");
+    }
+  }
+
+  async function openExport(format: "md" | "json") {
+    const apiUrl = hubUrl
+      .replace(/^ws/, "http")
+      .replace("/ws/client", `/sessions/current/export.${format}`);
+    await Linking.openURL(apiUrl);
   }
 
   const online = connection === "open";
@@ -145,6 +201,21 @@ export default function App() {
               </Pressable>
 
               <Text style={styles.statusText}>{status}</Text>
+
+              <View style={styles.toolRow}>
+                <Pressable onPress={analyzeNow} style={styles.secondaryButton}>
+                  <Feather name="refresh-cw" size={18} color="#253149" />
+                  <Text style={styles.secondaryButtonText}>生成纪要</Text>
+                </Pressable>
+                <Pressable onPress={() => openExport("md")} style={styles.secondaryButton}>
+                  <Feather name="download" size={18} color="#253149" />
+                  <Text style={styles.secondaryButtonText}>Markdown</Text>
+                </Pressable>
+                <Pressable onPress={() => openExport("json")} style={styles.secondaryButton}>
+                  <Feather name="file-text" size={18} color="#253149" />
+                  <Text style={styles.secondaryButtonText}>JSON</Text>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -155,7 +226,13 @@ export default function App() {
                 segments.map((segment) => (
                   <View key={segment.id} style={styles.segment}>
                     <Text style={styles.segmentSpeaker}>{segment.speaker}</Text>
-                    <Text style={styles.segmentText}>{segment.text}</Text>
+                    <TextInput
+                      multiline
+                      onBlur={() => commitSegment(segment)}
+                      onChangeText={(text) => updateLocalSegment(segment.id, text)}
+                      style={styles.segmentInput}
+                      value={segment.text}
+                    />
                   </View>
                 ))
               )}
@@ -164,6 +241,29 @@ export default function App() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>阶段性摘要</Text>
               <Text style={styles.summaryText}>{summary}</Text>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>智能问答</Text>
+              <View style={styles.qaInputRow}>
+                <TextInput
+                  onChangeText={setQuestion}
+                  onSubmitEditing={submitQuestion}
+                  placeholder="基于当前转录提问"
+                  placeholderTextColor="#8A94A6"
+                  style={styles.qaInput}
+                  value={question}
+                />
+                <Pressable accessibilityLabel="发送问题" onPress={submitQuestion} style={styles.iconButton}>
+                  <Feather name="send" size={19} color="#FFFFFF" />
+                </Pressable>
+              </View>
+              {qaItems.map((item, index) => (
+                <View key={`${item.question}-${index}`} style={styles.qaItem}>
+                  <Text style={styles.qaQuestion}>Q: {item.question}</Text>
+                  <Text style={styles.summaryText}>A: {item.answer}</Text>
+                </View>
+              ))}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -283,6 +383,26 @@ const styles = StyleSheet.create({
     color: "#596579",
     lineHeight: 22,
   },
+  toolRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: "#FBFCFF",
+    borderColor: "#CCD4DF",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    minHeight: 40,
+    paddingHorizontal: 12,
+  },
+  secondaryButtonText: {
+    color: "#253149",
+    fontWeight: "800",
+  },
   section: {
     backgroundColor: "#FFFFFF",
     borderColor: "#DFE5EE",
@@ -317,8 +437,45 @@ const styles = StyleSheet.create({
     color: "#18202F",
     lineHeight: 24,
   },
+  segmentInput: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#DFE5EE",
+    borderRadius: 6,
+    borderWidth: 1,
+    color: "#18202F",
+    lineHeight: 24,
+    minHeight: 70,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    textAlignVertical: "top",
+  },
   summaryText: {
     color: "#273449",
     lineHeight: 24,
+  },
+  qaInputRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  qaInput: {
+    backgroundColor: "#FBFCFF",
+    borderColor: "#CCD4DF",
+    borderRadius: 8,
+    borderWidth: 1,
+    color: "#18202F",
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: 12,
+  },
+  qaItem: {
+    borderTopColor: "#E2E7F0",
+    borderTopWidth: 1,
+    paddingTop: 10,
+  },
+  qaQuestion: {
+    color: "#253149",
+    fontWeight: "800",
+    lineHeight: 22,
+    marginBottom: 4,
   },
 });

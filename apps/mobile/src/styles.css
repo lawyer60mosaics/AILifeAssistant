@@ -14,7 +14,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -151,6 +152,26 @@ button:disabled {
   background: #c62837;
 }
 
+.tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid #ccd4df;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fbfcff;
+  color: #253149;
+  font-weight: 800;
+}
+
 .status-text {
   margin: 0;
   color: #596579;
@@ -190,11 +211,28 @@ button:disabled {
   font-weight: 800;
 }
 
-.segment p,
+.segment textarea,
 .analysis p,
 .empty {
   margin: 0;
   line-height: 1.65;
+}
+
+.segment textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px;
+  background: transparent;
+  color: #18202f;
+}
+
+.segment textarea:focus {
+  border-color: #9eb9e9;
+  outline: none;
+  background: #ffffff;
 }
 
 .empty {
@@ -203,6 +241,35 @@ button:disabled {
 
 .analysis {
   min-height: 180px;
+}
+
+.qa-box {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.qa-input-row {
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  gap: 10px;
+}
+
+.qa-list {
+  display: grid;
+  gap: 10px;
+}
+
+.qa-item {
+  border-top: 1px solid #e2e7f0;
+  padding-top: 10px;
+}
+
+.qa-item strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #253149;
+  line-height: 1.45;
 }
 
 @media (max-width: 760px) {
@@ -223,4 +290,3 @@ button:disabled {
     min-height: 140px;
   }
 }
-
