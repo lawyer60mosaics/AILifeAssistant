@@ -64,4 +64,4 @@ npm run android
 
 iOS project generation/build requires macOS + Xcode or EAS Build. See [docs/mobile-build.md](docs/mobile-build.md).
 
-GitHub Actions builds are configured for Android APK, iOS simulator app, and optional signed iOS IPA. See [docs/github-actions-build.md](docs/github-actions-build.md).
+GitHub Actions builds are configured for Android APK, iOS simulator app, and unsigned iOS device artifacts for later re-signing. See [docs/github-actions-build.md](docs/github-actions-build.md).

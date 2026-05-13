@@ -1,0 +1,78 @@
+name: Native iOS Unsigned Device Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios-unsigned:
+    name: iOS Unsigned Device Archive
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/native/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Generate iOS project
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build unsigned device archive
+        shell: bash
+        run: |
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "AI Minutes" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/AI-Minutes-Unsigned.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+
+      - name: Package resignable payload
+        shell: bash
+        run: |
+          APP_PATH="$(find build/AI-Minutes-Unsigned.xcarchive/Products/Applications -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app found in xcarchive"
+            exit 1
+          fi
+
+          rm -rf build/resignable build/artifacts
+          mkdir -p build/resignable/Payload build/artifacts
+          cp -R "$APP_PATH" build/resignable/Payload/
+          ditto -c -k --keepParent build/AI-Minutes-Unsigned.xcarchive build/artifacts/AI-Minutes-Unsigned.xcarchive.zip
+          cd build/resignable
+          zip -qry ../artifacts/AI-Minutes-Unsigned-Payload.zip Payload
+
+      - name: Upload unsigned iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-minutes-ios-unsigned-device-artifacts
+          path: |
+            apps/native/build/artifacts/AI-Minutes-Unsigned.xcarchive.zip
+            apps/native/build/artifacts/AI-Minutes-Unsigned-Payload.zip
+          if-no-files-found: error
+
