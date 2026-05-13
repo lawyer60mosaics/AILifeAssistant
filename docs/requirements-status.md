@@ -16,6 +16,7 @@
 - Markdown/JSON 导出 API。
 - Web 与 Native 端编辑、问答、手动分析、导出入口。
 - Hub mDNS 服务发布与 Native 局域网扫描发现。
+- Android `AudioRecord` PCM16 实时推流原生模块。
 
 ## 部分完成
 
@@ -26,7 +27,6 @@
 ## 未完成
 
 - Faster-Whisper 真实流式 STT。
-- Android `AudioRecord` PCM16 实时推流原生模块。
 - iOS `AVAudioEngine` PCM16 实时推流原生模块。
 - 发言人区分/声纹聚类。
 - 断线重连与音频补发队列。

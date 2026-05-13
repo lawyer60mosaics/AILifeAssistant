@@ -79,7 +79,7 @@ ws://<hub-host>:8765/ws/client
 
 ## 2. 二进制音频帧
 
-MVP 中 Collector 直接发送 `MediaRecorder` 产生的 `Blob` 字节。Hub 只统计帧并交给转录器接口。
+Web Collector 直接发送 `MediaRecorder` 产生的 `Blob` 字节。Native Android Collector 发送 PCM16 little-endian 二进制帧。Hub 只统计帧并交给转录器接口。
 
 生产实现建议：
 
@@ -92,4 +92,3 @@ MVP 中 Collector 直接发送 `MediaRecorder` 产生的 `Blob` 字节。Hub 只
 - Client 侧维护待发送队列，断线重连后继续发送。
 - Hub 每 10 秒发送应用层 `ping`。
 - Client 发现 30 秒无消息则主动重连。
-

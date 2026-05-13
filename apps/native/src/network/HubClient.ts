@@ -63,8 +63,8 @@ export class HubClient {
         clientId: `native-${Date.now()}`,
         role: "collector",
         audio: {
-          mimeType: "audio/webm;codecs=opus",
-          sampleRate: 48000,
+          mimeType: "audio/pcm;format=s16le",
+          sampleRate: 16000,
           channels: 1,
         },
       });

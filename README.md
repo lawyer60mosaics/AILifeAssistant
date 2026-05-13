@@ -69,3 +69,5 @@ GitHub Actions builds are configured for Android APK, iOS simulator app, and uns
 Cloud LLM analysis is disabled by default. See [docs/cloud-llm-config.md](docs/cloud-llm-config.md) to enable an OpenAI-compatible provider.
 
 LAN discovery is available through Hub mDNS publishing and Native Collector subnet scan. See [docs/discovery.md](docs/discovery.md).
+
+Android native PCM capture is implemented with `AudioRecord`; iOS native PCM capture is next. See [docs/native-audio.md](docs/native-audio.md).

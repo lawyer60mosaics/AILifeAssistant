@@ -1,4 +1,5 @@
 import { Audio } from "expo-av";
+import { DeviceEventEmitter, NativeModules, Platform } from "react-native";
 
 type NativeAudioStreamerOptions = {
   onChunk: (chunk: ArrayBuffer) => void;
@@ -6,11 +7,26 @@ type NativeAudioStreamerOptions = {
   onError: (message: string) => void;
 };
 
+type AndroidChunkEvent = {
+  base64: string;
+  sampleRate: number;
+  channels: number;
+  format: "pcm_s16le";
+};
+
+type AndroidAudioModule = {
+  start: () => Promise<boolean>;
+  stop: () => Promise<boolean>;
+};
+
 export type RecordingState = "idle" | "requesting_permission" | "recording" | "stopping";
+
+const androidAudio = NativeModules.AiMinutesAudio as AndroidAudioModule | undefined;
 
 export class NativeAudioStreamer {
   private recording: Audio.Recording | null = null;
   private mockTimer: ReturnType<typeof setInterval> | null = null;
+  private androidSubscription: { remove: () => void } | null = null;
 
   constructor(private readonly options: NativeAudioStreamerOptions) {}
 
@@ -24,19 +40,12 @@ export class NativeAudioStreamer {
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-      });
+      if (Platform.OS === "android" && androidAudio) {
+        await this.startAndroidPcm();
+        return;
+      }
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      this.recording = recording;
-      this.options.onState("recording");
-
-      this.startMockFrames();
+      await this.startFallbackRecorder();
     } catch (error) {
       this.options.onState("idle");
       this.options.onError(error instanceof Error ? error.message : "录音启动失败。");
@@ -46,13 +55,46 @@ export class NativeAudioStreamer {
   async stop() {
     this.options.onState("stopping");
     this.stopMockFrames();
+    this.androidSubscription?.remove();
+    this.androidSubscription = null;
 
     try {
+      if (Platform.OS === "android" && androidAudio) {
+        await androidAudio.stop();
+      }
       await this.recording?.stopAndUnloadAsync();
     } finally {
       this.recording = null;
       this.options.onState("idle");
     }
+  }
+
+  private async startAndroidPcm() {
+    this.androidSubscription?.remove();
+    this.androidSubscription = DeviceEventEmitter.addListener(
+      "AiMinutesAudioChunk",
+      (event: AndroidChunkEvent) => {
+        this.options.onChunk(base64ToArrayBuffer(event.base64));
+      },
+    );
+    await androidAudio?.start();
+    this.options.onState("recording");
+  }
+
+  private async startFallbackRecorder() {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+    });
+
+    const { recording } = await Audio.Recording.createAsync(
+      Audio.RecordingOptionsPresets.HIGH_QUALITY,
+    );
+    this.recording = recording;
+    this.options.onState("recording");
+
+    this.startMockFrames();
   }
 
   private startMockFrames() {
@@ -69,5 +111,14 @@ export class NativeAudioStreamer {
       this.mockTimer = null;
     }
   }
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = globalThis.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
 }
 
