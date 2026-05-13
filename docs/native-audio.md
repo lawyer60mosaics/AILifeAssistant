@@ -17,6 +17,12 @@ Android 已接入原生 `AudioRecord`：
 4. JS 端解码为 `ArrayBuffer`。
 5. `HubClient.sendAudio` 通过 WebSocket 发送二进制帧到 Hub。
 
+GitHub Actions 已验证 Android debug APK 可构建，产物名：
+
+```text
+ai-minutes-android-debug-apk
+```
+
 ## iOS
 
 iOS 仍使用 `expo-av` fallback 来维持录音会话和 mock frame。下一步需要实现：

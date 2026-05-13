@@ -17,6 +17,7 @@
 - Web 与 Native 端编辑、问答、手动分析、导出入口。
 - Hub mDNS 服务发布与 Native 局域网扫描发现。
 - Android `AudioRecord` PCM16 实时推流原生模块。
+- Android GitHub Actions debug APK 构建已通过。
 
 ## 部分完成
 

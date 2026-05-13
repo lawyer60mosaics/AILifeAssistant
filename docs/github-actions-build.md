@@ -20,6 +20,7 @@
 
 - Android APK 可以直接安装到 Android 测试机。
 - iOS 相关构建暂时改为手动触发，等 Android 跑通后再处理。
+- Android debug APK 已在 GitHub Actions 上验证通过。
 
 ### Native iOS Simulator Build
 
