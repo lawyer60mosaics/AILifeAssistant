@@ -1,0 +1,114 @@
+name: Native Mobile Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "codex/**"
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  android-debug:
+    name: Android Debug APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/native/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-minutes-android-debug-apk
+          path: apps/native/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  ios-simulator:
+    name: iOS Simulator Build
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/native/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Generate iOS project
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build simulator app
+        shell: bash
+        run: |
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "AI Minutes" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-minutes-ios-simulator-app
+          path: apps/native/build/Build/Products/Debug-iphonesimulator/*.app
+          if-no-files-found: error
+
