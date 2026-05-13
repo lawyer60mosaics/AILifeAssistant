@@ -9,6 +9,7 @@
 触发方式：
 
 - push 到 `main`、`master`、`codex/**`
+- push tag `v*`
 - pull request 到 `main`、`master`
 - 手动 `workflow_dispatch`
 
@@ -21,6 +22,14 @@
 - Android APK 可以直接安装到 Android 测试机。
 - iOS 相关构建暂时改为手动触发，等 Android 跑通后再处理。
 - Android debug APK 已在 GitHub Actions 上验证通过。
+- 推送 `v*` tag 时会自动创建 GitHub Release，并上传 Android debug APK。
+
+发布示例：
+
+```powershell
+git tag v0.0.1
+git push origin v0.0.1
+```
 
 ### Native iOS Simulator Build
 
