@@ -16,6 +16,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { NativeAudioStreamer, RecordingState } from "./src/audio/NativeAudioStreamer";
+import { discoverHub } from "./src/network/discovery";
 import { HubClient, HubEvent } from "./src/network/HubClient";
 
 type ConnectionState = "idle" | "connecting" | "open" | "closed";
@@ -30,6 +31,7 @@ export default function App() {
   const [summary, setSummary] = useState("暂无阶段性摘要");
   const [question, setQuestion] = useState("");
   const [qaItems, setQaItems] = useState<Array<{ question: string; answer: string }>>([]);
+  const [isDiscovering, setDiscovering] = useState(false);
 
   const clientRef = useRef<HubClient | null>(null);
   const streamer = useMemo(
@@ -90,6 +92,24 @@ export default function App() {
     const client = new HubClient(hubUrl.trim(), handleHubEvent, setConnection);
     clientRef.current = client;
     client.connect();
+  }
+
+  async function autoDiscover() {
+    setDiscovering(true);
+    setStatus("正在扫描局域网 Hub");
+    try {
+      const result = await discoverHub();
+      if (!result) {
+        setStatus("未发现 Hub，请确认 PC Hub 已启动且在同一局域网");
+        return;
+      }
+      setHubUrl(result.wsUrl);
+      setStatus(`已发现 Hub：${result.host}`);
+    } catch {
+      setStatus("自动发现失败，请手动输入 Hub 地址");
+    } finally {
+      setDiscovering(false);
+    }
   }
 
   async function toggleRecording() {
@@ -190,6 +210,12 @@ export default function App() {
                   <Feather name="link" size={21} color="#FFFFFF" />
                 </Pressable>
               </View>
+              <Pressable onPress={autoDiscover} style={styles.secondaryButton}>
+                <Feather name="search" size={18} color="#253149" />
+                <Text style={styles.secondaryButtonText}>
+                  {isDiscovering ? "扫描中" : "自动发现 Hub"}
+                </Text>
+              </Pressable>
 
               <Pressable
                 accessibilityLabel={isRecording ? "停止录音" : "开始录音"}

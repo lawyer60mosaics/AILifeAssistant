@@ -15,6 +15,10 @@ const config: ExpoConfig = {
     bundleIdentifier: "com.aiminutes.collector",
     supportsTablet: true,
     infoPlist: {
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+        NSAllowsLocalNetworking: true,
+      },
       NSMicrophoneUsageDescription:
         "AI Minutes needs microphone access to stream meeting audio to your local Hub.",
       NSLocalNetworkUsageDescription:

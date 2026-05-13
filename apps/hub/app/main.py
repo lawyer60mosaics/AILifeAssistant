@@ -2,10 +2,12 @@ from fastapi import FastAPI, Response, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.services.discovery import MdnsPublisher
 from app.services.session import HubSession
 
 app = FastAPI(title=settings.app_name)
 session = HubSession()
+discovery = MdnsPublisher()
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,9 +18,24 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup() -> None:
+    discovery.start()
+
+
+@app.on_event("shutdown")
+async def shutdown() -> None:
+    discovery.stop()
+
+
 @app.get("/health")
 async def health() -> dict[str, str | bool]:
     return {"status": "ok", "localOnly": settings.local_only}
+
+
+@app.get("/discovery")
+async def discovery_info() -> dict[str, str | int | bool]:
+    return discovery.payload()
 
 
 @app.get("/sessions/current")

@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     cloud_llm_api_key: str = ""
     cloud_llm_model: str = "gpt-4o-mini"
     cloud_llm_timeout_seconds: int = 30
+    hub_host: str = "0.0.0.0"
+    hub_port: int = 8765
+    mdns_enabled: bool = True
+    mdns_service_name: str = "AI Minutes Hub"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

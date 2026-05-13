@@ -67,3 +67,5 @@ iOS project generation/build requires macOS + Xcode or EAS Build. See [docs/mobi
 GitHub Actions builds are configured for Android APK, iOS simulator app, and unsigned iOS device artifacts for later re-signing. See [docs/github-actions-build.md](docs/github-actions-build.md).
 
 Cloud LLM analysis is disabled by default. See [docs/cloud-llm-config.md](docs/cloud-llm-config.md) to enable an OpenAI-compatible provider.
+
+LAN discovery is available through Hub mDNS publishing and Native Collector subnet scan. See [docs/discovery.md](docs/discovery.md).
