@@ -23,6 +23,13 @@ GitHub Actions 已验证 Android debug APK 可构建，产物名：
 ai-minutes-android-debug-apk
 ```
 
+如果在国内网络本地构建遇到 `dl.google.com` TLS 握手失败，可使用项目内镜像 init script：
+
+```powershell
+cd apps/native/android
+.\gradlew.bat :app:assembleDebug --no-daemon --init-script gradle/local-mirrors.init.gradle
+```
+
 ## iOS
 
 iOS 仍使用 `expo-av` fallback 来维持录音会话和 mock frame。下一步需要实现：
